@@ -1,0 +1,52 @@
+name: ShopEase CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Build & Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Syntax and Bytecode Compilation Check
+        run: |
+          python -m compileall -q .
+
+      - name: Run Unit Tests (Domain Logic & Edge Cases)
+        run: |
+          python -m unittest tests/test_shopping.py -v
+
+      - name: Run REST API Integration Tests
+        run: |
+          python -m unittest tests/test_api.py -v
+
+      - name: Validate Default Data Files
+        run: |
+          python -c "
+          import json
+          for f in ['data/products.json', 'data/customers.json', 'data/orders.json']:
+              with open(f, 'r') as fp:
+                  json.load(fp)
+              print(f'Valid JSON: {f}')
+          "
